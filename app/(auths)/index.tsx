@@ -33,7 +33,7 @@ export default function Login() {
         if (result && !result.success) 
             return Alert.alert("Đăng nhập thất bại", result.error );
 
-        router.push("/(tabs)/(bookStacks)");
+        router.replace("/(tabs)/(bookStacks)");
     };
 
     return (
