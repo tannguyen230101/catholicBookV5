@@ -5,6 +5,7 @@ import { checkNetwork } from "@/hooks/NetworkManager";
 
 export const HttpGetData = (url: string) => {
   const { accessToken } = AssessorUserProfile.getState();
+  console.log(accessToken)
 
   return new Promise((resolve, reject) => {
     // checkNetworkConnection().then(isConnected => {

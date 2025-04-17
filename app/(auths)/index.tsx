@@ -6,6 +6,7 @@ import { Link, router } from 'expo-router';
 import styles from '@/assets/styles/login.styles';
 import { AssessorUserProfile } from '@/commons/zustand/useAuthStore';
 import { LoginDTO } from '@/commons/DTOs/LoginDTO';
+import { checkNetwork } from '@/hooks/NetworkManager';
 
 
 export default function Login() {
@@ -18,6 +19,10 @@ export default function Login() {
     const isDisable = !email || !password || isLoading;
 
     const handleLogin = async () => {
+        if (!checkNetwork()) {
+            console.log('Không có kết nối mạng!');
+            return;
+        }
         if (!email || !password) {
             return Alert.alert("Lỗi", "Không được để trống Email và Mật khẩu!");
         };
@@ -29,9 +34,9 @@ export default function Login() {
         };
 
         const result = await login(dtoLogin);
-        
-        if (result && !result.success) 
-            return Alert.alert("Đăng nhập thất bại", result.error );
+
+        if (result && !result.success)
+            return Alert.alert("Đăng nhập thất bại", result.error);
 
         router.replace("/(tabs)/(bookStacks)");
     };

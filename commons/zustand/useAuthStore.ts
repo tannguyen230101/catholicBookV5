@@ -1,10 +1,10 @@
 import { create } from "zustand";
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserDTO } from "../DTOs/UserDTO";
 import { HttpPostWithoutToken } from "@/services/HttpNoToken";
 import { Config } from "@/constants/config";
 import { LoginDTO } from "../DTOs/LoginDTO";
 import { Constants } from "@/constants/appConstant";
+import * as SecureStore from 'expo-secure-store';
 
 export const AssessorUserProfile = create((set: any) => ({
     user: null,
@@ -16,22 +16,49 @@ export const AssessorUserProfile = create((set: any) => ({
     avatar: null,
     displayName: null,
 
+    // register: async (dtoUser: UserDTO) => {
+    //     set({ isLoading: true });
+    //     try {
+    //         const url = Config.server + "Authentication/Register";
+
+    //         const response = await HttpPostWithoutToken(url, dtoUser);
+    //         console.log("res: ", response);
+    
+    //         // Validate response and store idReturn
+    //         if (response && response.code === 1 && response.idReturn) {
+    //             set({ user: dtoUser, id: response.idReturn });
+    
+    //             // Ensure idReturn is valid before saving to AsyncStorage
+    //             if (response.idReturn) {
+    //                 await AsyncStorage.setItem("id", response.idReturn);
+    //             }
+    
+    //             return { success: true };
+    //         } else {
+    //             return { success: false, error: response?.message || "Đăng ký không thành công" };
+    //         }
+    //     } catch (error) {
+    //         console.log("Registration Error:", error);
+    //         return { success: false, error: error instanceof Error ? error.message : "An unknown error occurred" };
+    //     } finally {
+    //         set({ isLoading: false });
+    //     }
+    // },
+
+    // register with expo secure store
     register: async (dtoUser: UserDTO) => {
         set({ isLoading: true });
         try {
             const url = Config.server + "Authentication/Register";
-
+    
             const response = await HttpPostWithoutToken(url, dtoUser);
             console.log("res: ", response);
     
-            // Validate response and store idReturn
             if (response && response.code === 1 && response.idReturn) {
                 set({ user: dtoUser, id: response.idReturn });
     
-                // Ensure idReturn is valid before saving to AsyncStorage
-                if (response.idReturn) {
-                    await AsyncStorage.setItem("id", response.idReturn);
-                }
+                // Lưu id vào SecureStore
+                await SecureStore.setItemAsync("id", response.idReturn);
     
                 return { success: true };
             } else {
@@ -44,6 +71,7 @@ export const AssessorUserProfile = create((set: any) => ({
             set({ isLoading: false });
         }
     },
+    
 
     confirmEmail: async (dtoUser: UserDTO) => {
         set({ isLoading: true });
@@ -76,31 +104,65 @@ export const AssessorUserProfile = create((set: any) => ({
         set({ id })
     },
 
+    // login: async (dtoLogin: LoginDTO) => {
+    //     set({ isLoading: true });
+    //     try {
+    //         const url = Config.server + "Authentication/Login";
+
+    //         const response = await HttpPostWithoutToken(url, dtoLogin);
+    //         console.log("Register respone: ", response);
+
+    //         if (!response || !response.accessToken) {
+    //             return { success: false, error: response?.displayName || "Invalid login response" };
+    //         }
+
+    //         await AsyncStorage.setItem("accessToken", response.accessToken);
+    //         await AsyncStorage.setItem("user", JSON.stringify(response));
+    //         await AsyncStorage.setItem("id", response.id);
+    //         if (response.id && response.id !== "") {
+    //             console.log("User ID:", response.id);
+    //             set({ user: response, accessToken: response.accessToken, id: response.id });
+    //         } else {
+    //             set({ user: response, accessToken: response.accessToken });
+    //         }
+    //         return { success: true };
+    //     } catch (error: any) {
+    //         console.log("Login Error:", error);
+    //         return { success: false, error: error };
+    //     } finally {
+    //         set({ isLoading: false });
+    //     }
+    // },
+
+    // Login with expo secure store
     login: async (dtoLogin: LoginDTO) => {
         set({ isLoading: true });
         try {
             const url = Config.server + "Authentication/Login";
-
+    
             const response = await HttpPostWithoutToken(url, dtoLogin);
-            console.log("Register respone: ", response);
-
+            console.log("Login response: ", response);
+    
             if (!response || !response.accessToken) {
                 return { success: false, error: response?.displayName || "Invalid login response" };
             }
-
-            await AsyncStorage.setItem("accessToken", response.accessToken);
-            await AsyncStorage.setItem("user", JSON.stringify(response));
-            await AsyncStorage.setItem("id", response.id);
+    
+            // Lưu thông tin bảo mật
+            await SecureStore.setItemAsync("accessToken", response.accessToken);
+            await SecureStore.setItemAsync("user", JSON.stringify(response));
+            await SecureStore.setItemAsync("id", response.id);
+    
             if (response.id && response.id !== "") {
                 console.log("User ID:", response.id);
                 set({ user: response, accessToken: response.accessToken, id: response.id });
             } else {
                 set({ user: response, accessToken: response.accessToken });
             }
+    
             return { success: true };
         } catch (error: any) {
             console.log("Login Error:", error);
-            return { success: false, error: error };
+            return { success: false, error: error.message || "Login failed" };
         } finally {
             set({ isLoading: false });
         }
@@ -108,8 +170,8 @@ export const AssessorUserProfile = create((set: any) => ({
 
     checkAuth: async () => {
         try {
-            const accessToken = await AsyncStorage.getItem("accessToken");
-            const userJson = await AsyncStorage.getItem("user");
+            const accessToken = await SecureStore.getItemAsync("accessToken");
+            const userJson = await SecureStore.getItemAsync("user");
             // Parse user data if it exists
             const user = userJson ? JSON.parse(userJson) : null;
             // Validate accessToken and user before setting state
@@ -126,10 +188,11 @@ export const AssessorUserProfile = create((set: any) => ({
 
     logout: async () => {
         try {
-            await AsyncStorage.removeItem("accessToken");
-            await AsyncStorage.removeItem("user");
+            await SecureStore.deleteItemAsync("accessToken");
+            await SecureStore.deleteItemAsync("user");
+            await SecureStore.deleteItemAsync("id");
             // Clear state after successful removal
-            set({ accessToken: null, user: null });
+            set({ accessToken: null, user: null, id: null });
         } catch (error) {
             console.log("Logout Error:", error);
         }
